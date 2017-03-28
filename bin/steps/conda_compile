@@ -1,20 +1,31 @@
+# Ref - https://github.com/icoxfog417/conda-buildpack/blob/patched/bin/steps/conda_compile
+
+# Allow runtime.txt for Python version
+PYTHON_VERSION="2"
+
+if [ -f runtime.txt ]; then
+    PYTHON_RUNTIME=$(cat runtime.txt)
+    PYTHON_VERSION=`echo $PYTHON_RUNTIME | cut -d \- -f 2 | cut -d . -f 1`
+fi
+
 if [ ! -d /app/.heroku/miniconda ]; then
     puts-step "Preparing Python/Miniconda Environment"
-    curl -Os https://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh
-    bash Miniconda-latest-Linux-x86_64.sh  -p /app/.heroku/miniconda/ -b | indent
-    rm -fr Miniconda-latest-Linux-x86_64.sh
+    get_script="curl -s https://repo.continuum.io/miniconda/Miniconda${PYTHON_VERSION}-latest-Linux-x86_64.sh > miniconda-latest.sh"
+    eval $get_script
+    bash miniconda-latest.sh -p /app/.heroku/miniconda/ -b | indent
+    rm -fr miniconda-latest.sh
 
     conda install pip --yes | indent
 fi
 
 echo "nomkl" > $HOME/.heroku/miniconda/conda-meta/pinned
 echo "added pinned file in $HOME/.heroku/miniconda/conda-meta/pinned"
-conda install nomkl
+conda install nomkl --yes
 
 
 if [ -f conda-requirements.txt ]; then
     puts-step "Installing dependencies using Conda"
-    conda install --file conda-requirements.txt --yes | indent
+    conda install --no-deps --file conda-requirements.txt --yes | indent
 fi
 
 if [ -f requirements.txt ]; then
